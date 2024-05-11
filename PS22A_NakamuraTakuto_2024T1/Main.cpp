@@ -36,43 +36,78 @@ public:
 	Circle ball;
 
 	Ball() : velocity(0, -constracts::ball::SPEED), ball(400, 400, 8) {}
+
+	void Draw() {
+		// ボール描画
+    	ball.draw();
+	}
 };
 
 class Bricks {
+public:
+	/// @brief ブロック
+	Rect bricks[constracts::brick::MAX];
 
+	Bricks(){
+		using namespace constracts::brick;
+
+		// ブロックを初期化
+		for (int y = 0; y < Y_COUNT; ++y) {
+			for (int x = 0; x < X_COUNT; ++x) {
+				int index = y * X_COUNT + x;
+				bricks[index] = Rect{
+					x * SIZE.x,
+					60 + y * SIZE.y,
+					SIZE
+				};
+			}
+		}
+	}
+
+	void Intersecte(Ball* target) {
+		using namespace constracts::brick;
+
+		 ///ブロックとの衝突を検知
+			for (int i = 0; i < MAX; ++i) {
+				// 参照で保持
+				Rect& refBrick = bricks[i];
+
+			// 衝突を検知
+			if (refBrick.intersects(target))
+			{
+				// ブロックの上辺、または底辺と交差
+				if (refBrick.bottom().intersects(target) || refBrick.top().intersects(target))
+				{
+					target->velocity.y *= -1;
+				}
+				else // ブロックの左辺または右辺と交差
+				{
+					target->velocity.x *= -1;
+				}
+
+				// あたったブロックは画面外に出す
+				refBrick.y -= 600;
+
+				// 同一フレームでは複数のブロック衝突を検知しない
+				break;
+			}
+		}
+	 }
 };
 
 class Padddle {
+public:
+	// パドル
+	const Rect paddle;
 
+	Padddle() : paddle { Arg::center(Cursor::Pos().x, 500), 60, 10 } {}
 };
 
 void Main()
 {
 	using namespace constracts::ball;
 	 
-//#pragma region Ball
-//	/// @brief ボールの速度
-//	Vec2 ballVelocity{ 0, _SPEED };
-//
-//	/// @brief ボール
-//	Circle ball{ 400, 400, 8 };
-//#pragma endregion
-//
-//#pragma region Bricks
-//	/// @brief ブロック
-//	Rect bricks[MAX];
-//
-//	// ブロックを初期化
-//	for (int y = 0; y < Y_COUNT; ++y) {
-//		for (int x = 0; x < X_COUNT; ++x) {
-//			int index = y * X_COUNT + x;
-//			bricks[index] = Rect{
-//				x * BRICK_SIZE.x,
-//				60 + y * BRICK_SIZE.y,
-//				BRICK_SIZE
-//			};
-//		}
-//	}
+
 //#pragma endregion
 //
 //	while (System::Update())
