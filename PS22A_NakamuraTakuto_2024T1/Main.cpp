@@ -83,6 +83,14 @@ public:
 		ball.draw();
 	}
 
+	void Rebirs() {
+		using namespace constants::system;
+
+		if (velocity.y >= 550) {
+			Is_GameStart = false;
+		}
+	}
+
 	Circle GetCircle() const {
 
 		return ball;
@@ -283,6 +291,7 @@ void Main()
 			paddle.Update();
 			ball.Update();
 		}
+
 		//==============================
 		// コリジョン
 		//==============================
