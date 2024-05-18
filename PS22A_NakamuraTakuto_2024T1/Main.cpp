@@ -1,17 +1,22 @@
 ﻿# include <Siv3D.hpp>
 
 /*
-	古き良き書き方での実装
-	・安全性や利便性などは一切考えていない
+	よりC++ライクな書き方
+	・クラスベース
+	・継承を行う
 */
 
-namespace constracts {
+//==============================
+// 前方宣言
+//==============================
+class Ball;
+class Bricks;
+class Paddle;
 
-	namespace ball{
-		/// @brief ボールの速さ
-		constexpr double SPEED = 480.0;
-	};
-
+//==============================
+// 定数
+//==============================
+namespace constants {
 	namespace brick {
 		/// @brief ブロックのサイズ
 		constexpr Size SIZE{ 40, 20 };
@@ -24,38 +29,98 @@ namespace constracts {
 
 		/// @brief 合計ブロック数
 		constexpr int MAX = Y_COUNT * X_COUNT;
-	};
-};
+	}
 
-class Ball {
-public:
-	/// @brief ボールの速度
+	namespace ball {
+		/// @brief ボールの速さ
+		constexpr double SPEED = 480.0;
+	}
+
+	namespace paddle {
+		/// @brief パドルのサイズ
+		constexpr Size SIZE{ 60, 10 };
+	}
+
+	namespace reflect {
+		/// @brief 縦方向ベクトル
+		constexpr Vec2 VERTICAL{ 1, -1 };
+
+		/// @brief 横方向ベクトル
+		constexpr Vec2 HORIZONTAL{ -1,  1 };
+	}
+
+	namespace system {
+		 bool Is_GameStart = false;
+	}
+}
+
+//==============================
+// クラス宣言
+//==============================
+/// @brief ボール
+class Ball final {
+private:
+	/// @brief 速度
 	Vec2 velocity;
 
-	//@brief ボール
+	/// @brief ボール
 	Circle ball;
 
-	Ball() : velocity(0, -constracts::ball::SPEED), ball(400, 400, 8) {}
+public:
+	/// @brief コンストラクタ
+	Ball() : velocity({ 0, -constants::ball::SPEED }), ball({ 400, 400, 8 }) {}
 
-	void Draw() {
-		// ボール描画
-    	ball.draw();
+	/// @brief デストラクタ
+	~Ball() {}
+
+	/// @brief 更新
+	void Update() {
+		ball.moveBy(velocity * Scene::DeltaTime());
+	}
+
+	/// @brief 描画
+	void Draw() const {
+		ball.draw();
+	}
+
+	Circle GetCircle() const {
+
+		return ball;
+	}
+
+	Vec2 GetVelocity() const {
+		return velocity;
+	}
+
+	/// @brief 新しい移動速度を設定
+	/// @param newVelocity 新しい移動速度
+	void SetVelocity(Vec2 newVelocity) {
+		using namespace constants::ball;
+		velocity = newVelocity.setLength(SPEED);
+	}
+
+	/// @brief 反射
+	/// @param reflectVec 反射ベクトル方向 
+	void Reflect(const Vec2 reflectVec) {
+		velocity *= reflectVec;
 	}
 };
 
-class Bricks {
+/// @brief ブロック
+class Bricks final {
+private:
+	/// @brief ブロックリスト
+	Rect brickTable[constants::brick::MAX];
+
 public:
-	/// @brief ブロック
-	Rect bricks[constracts::brick::MAX];
+	/// @brief コンストラクタ
+	Bricks() {
+		using namespace constants::brick;
 
-	Bricks(){
-		using namespace constracts::brick;
-
-		// ブロックを初期化
 		for (int y = 0; y < Y_COUNT; ++y) {
 			for (int x = 0; x < X_COUNT; ++x) {
 				int index = y * X_COUNT + x;
-				bricks[index] = Rect{
+				brickTable[index] = Rect{
 					x * SIZE.x,
 					60 + y * SIZE.y,
 					SIZE
@@ -64,126 +129,172 @@ public:
 		}
 	}
 
-	void Intersecte(Ball* target) {
-		using namespace constracts::brick;
+	/// @brief デストラクタ
+	~Bricks() {}
 
-		 ///ブロックとの衝突を検知
-			for (int i = 0; i < MAX; ++i) {
-				// 参照で保持
-				Rect& refBrick = bricks[i];
+	/// @brief 衝突検知
+	void Intersects(Ball* const target);
 
-			// 衝突を検知
-			if (refBrick.intersects(target))
-			{
-				// ブロックの上辺、または底辺と交差
-				if (refBrick.bottom().intersects(target) || refBrick.top().intersects(target))
-				{
-					target->velocity.y *= -1;
-				}
-				else // ブロックの左辺または右辺と交差
-				{
-					target->velocity.x *= -1;
-				}
+	/// @brief 描画
+	void Draw() const {
+		using namespace constants::brick;
 
-				// あたったブロックは画面外に出す
-				refBrick.y -= 600;
-
-				// 同一フレームでは複数のブロック衝突を検知しない
-				break;
-			}
+		for (int i = 0; i < MAX; ++i) {
+			brickTable[i].stretched(-1).draw(HSV{ brickTable[i].y - 40 });
 		}
-	 }
+	}
 };
 
-class Padddle {
+/// @brief パドル
+class Paddle final {
+private:
+	Rect paddle;
+
 public:
-	// パドル
-	const Rect paddle;
+	/// @brief コンストラクタ
+	Paddle() : paddle(Rect(Arg::center(Cursor::Pos().x, 500), constants::paddle::SIZE)) {}
 
-	Padddle() : paddle { Arg::center(Cursor::Pos().x, 500), 60, 10 } {}
+	/// @brief デストラクタ
+	~Paddle() {}
+
+	/// @brief 衝突検知
+	void Intersects(Ball* const target) const;
+
+	/// @brief 更新
+	void Update() {
+		paddle.x = Cursor::Pos().x - (constants::paddle::SIZE.x / 2);
+	}
+
+	/// @brief 描画
+	void Draw() const {
+		paddle.rounded(3).draw();
+	}
 };
 
+/// @brief 壁
+class Wall {
+public:
+	/// @brief 衝突検知
+	static void Intersects(Ball* target) {
+		using namespace constants;
+
+		if (!target) {
+			return;
+		}
+
+		auto velocity = target->GetVelocity();
+		auto ball = target->GetCircle();
+
+		// 天井との衝突を検知
+		if ((ball.y < 0) && (velocity.y < 0))
+		{
+			target->Reflect(reflect::VERTICAL);
+		}
+
+		// 壁との衝突を検知
+		if (((ball.x < 0) && (velocity.x < 0))
+			|| ((Scene::Width() < ball.x) && (0 < velocity.x)))
+		{
+			target->Reflect(reflect::HORIZONTAL);
+		}
+	}
+};
+
+//==============================
+// 定義
+//==============================
+void Bricks::Intersects(Ball* const target) {
+	using namespace constants;
+	using namespace constants::brick;
+
+	if (!target) {
+		return;
+	}
+
+	auto ball = target->GetCircle();
+
+	for (int i = 0; i < MAX; ++i) {
+		// 参照で保持
+		Rect& refBrick = brickTable[i];
+
+		// 衝突を検知
+		if (refBrick.intersects(ball))
+		{
+			// ブロックの上辺、または底辺と交差
+			if (refBrick.bottom().intersects(ball)
+				|| refBrick.top().intersects(ball))
+			{
+				target->Reflect(reflect::VERTICAL);
+			}
+			else // ブロックの左辺または右辺と交差
+			{
+				target->Reflect(reflect::HORIZONTAL);
+			}
+
+			// あたったブロックは画面外に出す
+			refBrick.y -= 600;
+
+			// 同一フレームでは複数のブロック衝突を検知しない
+			break;
+		}
+	}
+}
+
+void Paddle::Intersects(Ball* const target) const {
+	if (!target) {
+		return;
+	}
+
+	auto velocity = target->GetVelocity();
+	auto ball = target->GetCircle();
+
+	if ((0 < velocity.y) && paddle.intersects(ball))
+	{
+		target->SetVelocity(Vec2{
+			(ball.x - paddle.center().x) * 10,
+			-velocity.y
+		});
+	}
+}
+
+//==============================
+// エントリー
+//==============================
 void Main()
 {
-	using namespace constracts::ball;
-	 
+	using namespace constants::system;
 
-//#pragma endregion
-//
-//	while (System::Update())
-//	{
-//		//==============================
-//		// 更新
-//		//==============================
-//		// パドル
-//		const Rect paddle{ Arg::center(Cursor::Pos().x, 500), 60, 10 };
-//
-//		// ボール移動
-//		ball.moveBy(ballVelocity * Scene::DeltaTime());
-//
-//		//==============================
-//		// コリジョン
-//		//==============================
-//		// ブロックとの衝突を検知
-//		for (int i = 0; i < MAX; ++i) {
-//			// 参照で保持
-//			Rect& refBrick = bricks[i];
-//
-//			// 衝突を検知
-//			if (refBrick.intersects(ball))
-//			{
-//				// ブロックの上辺、または底辺と交差
-//				if (refBrick.bottom().intersects(ball) || refBrick.top().intersects(ball))
-//				{
-//					ballVelocity.y *= -1;
-//				}
-//				else // ブロックの左辺または右辺と交差
-//				{
-//					ballVelocity.x *= -1;
-//				}
-//
-//				// あたったブロックは画面外に出す
-//				refBrick.y -= 600;
-//
-//				// 同一フレームでは複数のブロック衝突を検知しない
-//				break;
-//			}
-//		}
-//
-//		// 天井との衝突を検知
-//		if ((ball.y < 0) && (ballVelocity.y < 0))
-//		{
-//			ballVelocity.y *= -1;
-//		}
-//
-//		// 壁との衝突を検知
-//		if (((ball.x < 0) && (ballVelocity.x < 0))
-//			|| ((Scene::Width() < ball.x) && (0 < ballVelocity.x)))
-//		{
-//			ballVelocity.x *= -1;
-//		}
-//
-//		// パドルとの衝突を検知
-//		if ((0 < ballVelocity.y) && paddle.intersects(ball))
-//		{
-//			ballVelocity = Vec2{
-//				(ball.x - paddle.center().x) * 10,
-//				-ballVelocity.y
-//			}.setLength(BALL_SPEED);
-//		}
-//
-//		//==============================
-//		// 描画
-//		//==============================
-//		// ブロック描画
-//		for (int i = 0; i < MAX; ++i) {
-//			bricks[i].stretched(-1).draw(HSV{ bricks[i].y - 40 });
-//		}
-//
-//		// ボール描画
-//		ball.draw();
-//
-//		// パドル描画
-//		paddle.rounded(3).draw();
-//	}
+	Bricks bricks;
+	Ball ball;
+	Paddle paddle;
+
+	while (System::Update())
+	{
+		//=============================
+		// ゲーム開始のToF切り替え
+		// ============================
+		if (KeyEnter.down()) {
+			Is_GameStart = true;
+		}
+		//==============================
+		// 更新
+		//==============================
+		if (Is_GameStart) {
+			paddle.Update();
+			ball.Update();
+		}
+		//==============================
+		// コリジョン
+		//==============================
+		bricks.Intersects(&ball);
+		Wall::Intersects(&ball);
+		paddle.Intersects(&ball);
+
+		//==============================
+		// 描画
+		//==============================
+		bricks.Draw();
+		ball.Draw();
+		paddle.Draw();
+	}
 }
