@@ -51,6 +51,7 @@ namespace constants {
 
 	namespace system {
 		 bool Is_GameStart = false;
+		 int life = 3;
 	}
 }
 
@@ -204,15 +205,33 @@ public:
 	}
 };
 
-///@holl 落下
-class Holl {
-protected:
-	//落ちた回数のカウント変数
-	static inline int outCount = 0;
+//@gamemanager クリア、ゲームオーバー時の処理
+class GameManager {
+private:
+	//残機の数
+	int life = constants::system::life;
+	//表示する残機（円）を管理する配列
+	Circle lifeArr[];
 
 public:
-	///侵入判定
+
+	/// @brief 描画する残機を生成し、配列に格納
+	void LifeSetter() {
+		lifeArr[life];
+
+		for (int i = 0; i < life; i++) {
+			lifeArr[i] = Circle{ 20 + (30 * i), 15, 8 };
+		}
+	}
+
+	///落下判定
 	void Intersects(Ball* target);
+
+	void Draw()  {
+		for (int i = 0; i < life; i++) {
+			lifeArr[i].draw();
+		}
+	}
 };
 
 //==============================
@@ -272,7 +291,7 @@ void Paddle::Intersects(Ball* const target) const {
 	}
 }
 
-void Holl::Intersects(Ball* target) {
+void GameManager::Intersects(Ball* target) {
 	using namespace constants;
 
 	if (!target) {
@@ -284,18 +303,24 @@ void Holl::Intersects(Ball* target) {
 	//ボールの落下判定
 	if (ball.y >= 600)
 	{
-		if (outCount >= 3) {
+		//落下した時にライフを1減らす
+		life -= 1;
 
+		if (life <= 0) {//残り残機がないとき
+			//残機表示を減らす
+			lifeArr[life].x = -600;
+			//ゲーム処理を一部停止
+			system::Is_GameStart = false;
 		}
-		else {
+		else {//残機がまだあるとき
 			//ボールの座標移動処理
 			target->PosReset();
 			////Velocityのリセット
-			target->SetVelocity({ 0, -constants::ball::SPEED });
+			target->SetVelocity({ 0, -ball::SPEED });
 			//ゲーム処理を一部停止
 			system::Is_GameStart = false;
-			//落下した回数のカウント
-			outCount++;
+			//残機表示を減らす
+			lifeArr[life].x = -600;
 		}
 	}
 }
@@ -310,7 +335,10 @@ void Main()
 	Bricks bricks;
 	Ball ball;
 	Paddle paddle;
-	Holl holl;
+	GameManager gamemanager;
+
+	//残機要のCircleを生成。配列に格納
+	gamemanager.LifeSetter();
 
 
 	while (System::Update())
@@ -335,12 +363,13 @@ void Main()
 		bricks.Intersects(&ball);
 		Wall::Intersects(&ball);
 		paddle.Intersects(&ball);
-		holl.Intersects(&ball);
+		gamemanager.Intersects(&ball);
 		//==============================
 		// 描画
 		//==============================
 		bricks.Draw();
 		ball.Draw();
 		paddle.Draw();
+		gamemanager.Draw();
 	}
 }
