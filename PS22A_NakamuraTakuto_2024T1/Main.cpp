@@ -83,16 +83,12 @@ public:
 		ball.draw();
 	}
 
-	void Rebirs() {
-		using namespace constants::system;
-
-		if (velocity.y >= 550) {
-			Is_GameStart = false;
-		}
+	Circle PosReset()  {
+		ball.setPos(400, 400);
+		return ball;
 	}
 
 	Circle GetCircle() const {
-
 		return ball;
 	}
 
@@ -208,6 +204,17 @@ public:
 	}
 };
 
+///@holl 落下
+class Holl {
+protected:
+	//落ちた回数のカウント変数
+	static inline int outCount = 0;
+
+public:
+	///侵入判定
+	void Intersects(Ball* target);
+};
+
 //==============================
 // 定義
 //==============================
@@ -265,6 +272,34 @@ void Paddle::Intersects(Ball* const target) const {
 	}
 }
 
+void Holl::Intersects(Ball* target) {
+	using namespace constants;
+
+	if (!target) {
+		return;
+	}
+
+	Circle ball = target->GetCircle();
+
+	//ボールの落下判定
+	if (ball.y >= 600)
+	{
+		if (outCount >= 3) {
+
+		}
+		else {
+			//ボールの座標移動処理
+			target->PosReset();
+			////Velocityのリセット
+			target->SetVelocity({ 0, -constants::ball::SPEED });
+			//ゲーム処理を一部停止
+			system::Is_GameStart = false;
+			//落下した回数のカウント
+			outCount++;
+		}
+	}
+}
+
 //==============================
 // エントリー
 //==============================
@@ -275,6 +310,8 @@ void Main()
 	Bricks bricks;
 	Ball ball;
 	Paddle paddle;
+	Holl holl;
+
 
 	while (System::Update())
 	{
@@ -298,7 +335,7 @@ void Main()
 		bricks.Intersects(&ball);
 		Wall::Intersects(&ball);
 		paddle.Intersects(&ball);
-
+		holl.Intersects(&ball);
 		//==============================
 		// 描画
 		//==============================
