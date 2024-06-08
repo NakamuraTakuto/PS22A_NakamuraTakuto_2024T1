@@ -211,13 +211,16 @@ private:
 	//残機の数
 	int life = constants::system::life;
 	//表示する残機（円）を管理する配列
-	Circle lifeArr[];
+	Circle* lifeArr;
 
 public:
+	~GameManager() {
+		delete[] lifeArr;
+	}
 
-	/// @brief 描画する残機を生成し、配列に格納
+	///  描画する残機を生成し、配列に格納
 	void LifeSetter() {
-		lifeArr[life];
+		lifeArr = new Circle[life]; //メモ、実際に同じことをやる場合はVectorの方が良い
 
 		for (int i = 0; i < life; i++) {
 			lifeArr[i] = Circle{ 20 + (30 * i), 15, 8 };
