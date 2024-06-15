@@ -22,10 +22,10 @@ namespace constants {
 		constexpr Size SIZE{ 40, 20 };
 
 		/// @brief ブロックの数　縦
-		constexpr int Y_COUNT = 1;
+		constexpr int Y_COUNT = 5;
 
 		/// @brief ブロックの数　横
-		constexpr int X_COUNT = 1;
+		constexpr int X_COUNT = 20;
 
 		/// @brief 合計ブロック数
 		constexpr int MAX = Y_COUNT * X_COUNT;
