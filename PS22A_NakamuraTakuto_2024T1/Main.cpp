@@ -51,6 +51,7 @@ namespace constants {
 
 	namespace system {
 		 bool Is_GameStart = false;
+		 bool Is_GameOver = false;
 		 int life = 3;
 	}
 }
@@ -314,6 +315,7 @@ void GameManager::Intersects(Ball* target) {
 			lifeArr[life].x = -600;
 			//ゲーム処理を一部停止
 			system::Is_GameStart = false;
+			system::Is_GameOver = true;
 		}
 		else {//残機がまだあるとき
 			//ボールの座標移動処理
@@ -343,6 +345,8 @@ void Main()
 	//残機要のCircleを生成。配列に格納
 	gamemanager.LifeSetter();
 
+	//テキストの前準備
+	Font font{ FontMethod::MSDF, 48 };
 
 	while (System::Update())
 	{
@@ -367,6 +371,13 @@ void Main()
 		Wall::Intersects(&ball);
 		paddle.Intersects(&ball);
 		gamemanager.Intersects(&ball);
+
+		//==============================
+		// GameOver時のテキスト描画
+		// =============================
+		if (Is_GameOver) {
+			font(U"GameOver").drawAt(40, 400, 300, ColorF{ 255, 0, 0 });
+		}
 		//==============================
 		// 描画
 		//==============================
