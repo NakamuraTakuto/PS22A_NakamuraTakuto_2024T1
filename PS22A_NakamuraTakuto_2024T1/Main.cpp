@@ -22,10 +22,10 @@ namespace constants {
 		constexpr Size SIZE{ 40, 20 };
 
 		/// @brief ブロックの数　縦
-		constexpr int Y_COUNT = 5;
+		constexpr int Y_COUNT = 1;
 
 		/// @brief ブロックの数　横
-		constexpr int X_COUNT = 20;
+		constexpr int X_COUNT = 1;
 
 		/// @brief 合計ブロック数
 		constexpr int MAX = Y_COUNT * X_COUNT;
@@ -52,7 +52,9 @@ namespace constants {
 	namespace system {
 		 bool Is_GameStart = false;
 		 bool Is_GameOver = false;
+		 bool Is_GameClear = false;
 		 int life = 3;
+		 int BrickCounter = brick::MAX;
 	}
 }
 
@@ -271,6 +273,11 @@ void Bricks::Intersects(Ball* const target) {
 
 			// あたったブロックは画面外に出す
 			refBrick.y -= 600;
+			system::BrickCounter -= 1;
+
+			if (system::BrickCounter <= 0) {
+				system::Is_GameClear = true;
+			}
 
 			// 同一フレームでは複数のブロック衝突を検知しない
 			break;
@@ -373,10 +380,14 @@ void Main()
 		gamemanager.Intersects(&ball);
 
 		//==============================
-		// GameOver時のテキスト描画
+		// GameOver,GameCliear時のテキスト描画
 		// =============================
 		if (Is_GameOver) {
 			font(U"GameOver").drawAt(40, 400, 300, ColorF{ 255, 0, 0 });
+		}
+		else if (Is_GameClear) {
+			Is_GameStart = false;
+			font(U"GameClear").drawAt(40, 400, 300, ColorF{0, 0, 255});
 		}
 		//==============================
 		// 描画
